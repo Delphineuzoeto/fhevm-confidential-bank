@@ -1,110 +1,89 @@
-# FHEVM Hardhat Template
+# ConfidentialBank — Encrypted Banking on Zama fhEVM
 
-A Hardhat-based template for developing Fully Homomorphic Encryption (FHE) enabled Solidity smart contracts using the
-FHEVM protocol by Zama.
+Built for **Zama Developer Program Season 2** by Delphine Uzoeto.
 
-## Quick Start
+## What This Project Does
 
-For detailed instructions see:
-[FHEVM Hardhat Quick Start Tutorial](https://docs.zama.ai/protocol/solidity-guides/getting-started/quick-start-tutorial)
+This project implements a **confidential banking system** on the blockchain using **Fully Homomorphic Encryption (FHE)**.
 
-### Prerequisites
+In a normal blockchain, every transaction is public — anyone can see how much you deposited, withdrew, or transferred. This project solves that problem. Using Zama's fhEVM, all balances and transaction amounts stay **encrypted on-chain at all times**. Even the blockchain itself never sees the actual numbers.
 
-- **Node.js**: Version 20 or higher
-- **npm or yarn/pnpm**: Package manager
+### The Core Idea: Arithmetic on Encrypted Data
 
-### Installation
-
-1. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-2. **Set up environment variables**
-
-   ```bash
-   npx hardhat vars set MNEMONIC
-
-   # Set your Infura API key for network access
-   npx hardhat vars set INFURA_API_KEY
-
-   # Optional: Set Etherscan API key for contract verification
-   npx hardhat vars set ETHERSCAN_API_KEY
-   ```
-
-3. **Compile and test**
-
-   ```bash
-   npm run compile
-   npm run test
-   ```
-
-4. **Deploy to local network**
-
-   ```bash
-   # Start a local FHEVM-ready node
-   npx hardhat node
-   # Deploy to local network
-   npx hardhat deploy --network localhost
-   ```
-
-5. **Deploy to Sepolia Testnet**
-
-   ```bash
-   # Deploy to Sepolia
-   npx hardhat deploy --network sepolia
-   # Verify contract on Etherscan
-   npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
-   ```
-
-6. **Test on Sepolia Testnet**
-
-   ```bash
-   # Once deployed, you can run a simple test on Sepolia.
-   npx hardhat test --network sepolia
-   ```
-
-## 📁 Project Structure
-
-```
-fhevm-hardhat-template/
-├── contracts/           # Smart contract source files
-│   └── FHECounter.sol   # Example FHE counter contract
-├── deploy/              # Deployment scripts
-├── tasks/               # Hardhat custom tasks
-├── test/                # Test files
-├── hardhat.config.ts    # Hardhat configuration
-└── package.json         # Dependencies and scripts
-```
-
-## 📜 Available Scripts
-
-| Script             | Description              |
-| ------------------ | ------------------------ |
-| `npm run compile`  | Compile all contracts    |
-| `npm run test`     | Run all tests            |
-| `npm run coverage` | Generate coverage report |
-| `npm run lint`     | Run linting checks       |
-| `npm run clean`    | Clean build artifacts    |
-
-## 📚 Documentation
-
-- [FHEVM Documentation](https://docs.zama.ai/fhevm)
-- [FHEVM Hardhat Setup Guide](https://docs.zama.ai/protocol/solidity-guides/getting-started/setup)
-- [FHEVM Testing Guide](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat/write_test)
-- [FHEVM Hardhat Plugin](https://docs.zama.ai/protocol/solidity-guides/development-guide/hardhat)
-
-## 📄 License
-
-This project is licensed under the BSD-3-Clause-Clear License. See the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **GitHub Issues**: [Report bugs or request features](https://github.com/zama-ai/fhevm/issues)
-- **Documentation**: [FHEVM Docs](https://docs.zama.ai)
-- **Community**: [Zama Discord](https://discord.gg/zama)
+Normally, to add two numbers you need to know what they are. FHE breaks that rule — it lets you perform math (add, subtract, compare) on encrypted values **without ever decrypting them**. The result comes out still encrypted, and only the authorized user can decrypt their own balance.
 
 ---
 
-**Built with ❤️ by the Zama team**
+## Contracts
+
+### `ConfidentialBank.sol` — The Main Contract
+- **Deposit** — add an encrypted amount to your encrypted balance
+- **Withdraw** — subtract encrypted amount with overdraft protection
+- **Transfer** — send encrypted funds privately
+- **Transfer with Fee** — transfer with plaintext fee rate
+
+### `EncryptedTransfer.sol` — Transfer Primitives
+### `MinimalExample.sol` — Simplest FHE subtraction example
+
+---
+
+## How Privacy Works
+
+When Alice deposits 1000 tokens:
+- `1000` is encrypted on her device before hitting the blockchain
+- Contract receives an encrypted blob — has no idea the value is 1000
+- Balance stored encrypted — only Alice can decrypt it
+
+When Alice withdraws 400:
+- Contract checks `encrypted_balance >= encrypted_withdrawal` on encrypted values
+- If sufficient, subtraction happens on encrypted values
+- If not, subtracts zero — all without learning her balance
+
+This is the `FHE.select()` pattern — encrypted if/else.
+
+---
+
+## API Migration (TFHE → FHE)
+
+| Deprecated | Current v0.11 |
+|---|---|
+| `import "fhevm/lib/TFHE.sol"` | `import "@fhevm/solidity/lib/FHE.sol"` |
+| `TFHE.setCoprocessor(...)` | Inherited via `ZamaEthereumConfig` |
+| `TFHE.sub()`, `TFHE.add()` | `FHE.sub()`, `FHE.add()` |
+| `bytes32 encryptedAmount` | `externalEuint64 encryptedAmount` |
+| `TFHE.asEuint64(input)` | `FHE.fromExternal(input, proof)` |
+
+---
+
+## Test Results
+ConfidentialBank
+✔ balance should be uninitialized after deployment
+✔ alice can deposit an encrypted amount
+✔ alice can withdraw an encrypted amount
+✔ alice can transfer encrypted funds to bob
+✔ withdraw should not go below zero (insufficient balance protection)
+8 passing (2s)
+---
+
+## Running the Project
+
+```bash
+git clone https://github.com/Delphineuzoeto/confidential-bank-fhevm
+cd confidential-bank-fhevm
+npm install
+npx hardhat node
+npx hardhat test --network localhost
+```
+
+---
+
+## Built With
+
+- [Zama fhEVM](https://docs.zama.ai/protocol) — Fully Homomorphic Encryption for EVM
+- [@fhevm/solidity](https://github.com/zama-ai/fhevm) v0.11
+- [Hardhat](https://hardhat.org/) v2
+- Node.js v22
+
+## License
+
+BSD-3-Clause-Clear
